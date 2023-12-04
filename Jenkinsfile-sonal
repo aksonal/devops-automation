@@ -1,0 +1,54 @@
+pipeline {
+    agent any
+    
+    tools {
+        maven "Maven_3_5_0"
+    }
+
+    stages {
+        
+        stage('Git Pull') {
+            steps {
+                
+                checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/aksonal/devops-automation.git']])
+                
+            }
+        }
+        
+        stage('Build Maven') {
+            
+            steps {
+                sh 'mvn clean install'
+            }
+        }
+        
+        stage('Build Docker image') {
+            
+            steps {
+                script {
+                    // Run your pipeline commands here
+                    sh 'docker build -t sk22tp/maven-image:3.5.0 ./'
+                    
+                }
+            }
+        }
+        
+        stage('Push Docker image to jenkins') {
+            
+            steps {
+                script {
+                    // here passed dockerhub password as variable in jenkins 
+                    withCredentials([string(credentialsId: 'DockerHub-Password', variable: 'DockerHubPWD')]) {
+                    // First login to dockerhub to push the image
+                    sh 'docker login -u sk22tp -p ${DockerHubPWD}'
+                    
+                    // now push the image
+                    sh 'docker push sk22tp/maven-image:3.5.0'
+                    }
+                    
+                }
+            }
+        }
+        
+    }
+}
